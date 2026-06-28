@@ -4,6 +4,13 @@ import type { Prospect } from '@/types/prospect'
 import type { LivePlaceData } from '@/types/google'
 import { buildRecapText } from '@/lib/handoff'
 
+// Modelli selezionabili dalla scheda. Haiku = default economico; Sonnet = prosa più curata.
+const MODELS: Record<string, string> = {
+  haiku:  'claude-haiku-4-5-20251001',
+  sonnet: 'claude-sonnet-4-6',
+}
+const DEFAULT_MODEL = 'sonnet'
+
 const SYSTEM_PROMPT = `Sei un consulente digitale che aiuta imprenditori locali italiani.
 Scrivi una email di outreach B2B a freddo per Fabio, titolare di un'agenzia web in Versilia.
 
@@ -19,15 +26,20 @@ Regole ferme:
 
 export async function POST(req: NextRequest) {
   // Flag fase 2: useWebSearch (non attivo in v1, struttura predisposta)
-  const { prospect, liveData }: { prospect: Prospect; liveData: LivePlaceData | null } = await req.json()
+  const { prospect, liveData, model }: {
+    prospect: Prospect
+    liveData: LivePlaceData | null
+    model?: string
+  } = await req.json()
 
   const recap = buildRecapText(prospect, liveData)
+  const modelId = MODELS[model ?? DEFAULT_MODEL] ?? MODELS[DEFAULT_MODEL]
 
   const client = new Anthropic()
 
   try {
     const msg = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+      model: modelId,
       max_tokens: 800,
       system: SYSTEM_PROMPT,
       messages: [

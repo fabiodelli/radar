@@ -127,9 +127,19 @@ export async function fetchSiteSignals(websiteUrl: string): Promise<Partial<Sign
   const emails_found = [...new Set(allText.match(emailRegex) ?? [])]
     .filter(e => !e.endsWith('.png') && !e.endsWith('.jpg'))
 
-  // Phone numbers
-  const phoneRegex = /(\+39[\s\-]?)?(?:\d[\s\-]?){6,12}\d/g
-  const phones_found = [...new Set(allText.match(phoneRegex) ?? [])].slice(0, 5)
+  // Phone numbers — preferisci i link tel: (affidabili), poi un fallback ristretto sul testo
+  const phoneSet = new Set<string>()
+  $('a[href^="tel:"]').each((_, el) => {
+    const raw = ($(el).attr('href') ?? '').replace(/^tel:/, '').trim()
+    if (raw) phoneSet.add(raw)
+  })
+  // Fallback testuale: numeri italiani plausibili (prefisso +39 o 0/3 iniziale, 8-11 cifre)
+  const phoneRegex = /(?:\+39[\s.\-]?)?(?:0\d{1,3}|3\d{2})[\s.\-]?\d{5,8}/g
+  for (const m of allText.match(phoneRegex) ?? []) {
+    const digits = m.replace(/\D/g, '')
+    if (digits.length >= 8 && digits.length <= 13) phoneSet.add(m.trim())
+  }
+  const phones_found = [...phoneSet].slice(0, 5)
 
   // Copyright year (per staleness)
   const footerText = $('footer').text() + $('[class*="footer"]').text()
@@ -189,16 +199,50 @@ export function classifyEmails(emails: string[]): {
   }
 }
 
-// Cerca presenza social quando non c'è sito
-export async function findSocialPresence(businessName: string): Promise<{
+// Cerca presenza social quando non c'è sito (best-effort, fallback silenzioso).
+// Usa la ricerca HTML di DuckDuckGo per trovare una pagina FB/IG dell'attività.
+export async function findSocialPresence(
+  businessName: string,
+  comune?: string
+): Promise<{
   social_only: boolean
   social_fb: string | null
   social_ig: string | null
 }> {
-  // In v1: ricerca semplice per nome. Fase 2: usa API FB/IG.
+  const empty = { social_only: false, social_fb: null, social_ig: null }
+  const q = `${businessName} ${comune ?? ''}`.trim()
+  if (!q) return empty
+
+  async function search(domain: string): Promise<string | null> {
+    try {
+      const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(`site:${domain} ${q}`)}`
+      const res = await fetch(url, {
+        signal: AbortSignal.timeout(6000),
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; RadarBot/1.0)' },
+      })
+      if (!res.ok) return null
+      const html = await res.text()
+      const $ = cheerio.load(html)
+      let found: string | null = null
+      $('a.result__a, a[href]').each((_, el) => {
+        if (found) return
+        let href = $(el).attr('href') ?? ''
+        // DuckDuckGo incapsula i link: estrai uddg= se presente
+        const m = href.match(/[?&]uddg=([^&]+)/)
+        if (m) href = decodeURIComponent(m[1])
+        if (href.includes(domain)) found = href
+      })
+      return found
+    } catch {
+      return null
+    }
+  }
+
+  const [fb, ig] = await Promise.all([search('facebook.com'), search('instagram.com')])
+  const hasSocial = !!(fb || ig)
   return {
-    social_only:  false,
-    social_fb:    null,
-    social_ig:    null,
+    social_only: hasSocial, // chiamata solo quando non c'è sito → social = unica presenza
+    social_fb:   fb,
+    social_ig:   ig,
   }
 }

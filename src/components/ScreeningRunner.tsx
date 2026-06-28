@@ -27,6 +27,7 @@ export function ScreeningRunner() {
   const [categorie, setCategorie] = useState<string[]>([])
   const [comuni, setComuni] = useState<string[]>([])
   const [threshold, setThreshold] = useState(2)
+  const [includePageSpeed, setIncludePageSpeed] = useState(false)
   const [categoriaCustom, setCategoriaCustom] = useState('')
   const [running, setRunning] = useState(false)
   const [done, setDone] = useState(false)
@@ -69,7 +70,7 @@ export function ScreeningRunner() {
     setApiCalls(0)
     setStats(null)
 
-    const body: ScreeningQuery = { categorie, comuni, threshold }
+    const body: ScreeningQuery = { categorie, comuni, threshold, includePageSpeed }
 
     try {
       const res = await fetch('/api/screening/run', {
@@ -194,6 +195,22 @@ export function ScreeningRunner() {
             className="w-48"
           />
           <p className="text-xs text-gray-400 mt-0.5">Solo i prospect con score ≥ {threshold} entrano in lista</p>
+        </div>
+
+        {/* Toggle PageSpeed */}
+        <div>
+          <label className="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={includePageSpeed}
+              onChange={e => setIncludePageSpeed(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300"
+            />
+            Includi analisi PageSpeed
+          </label>
+          <p className="text-xs text-gray-400 mt-0.5 ml-6">
+            Misura velocità/SEO di ogni sito. Più lento e costoso (una chiamata API in più per sito): tienilo spento per i giri ampi, accendilo per liste corte.
+          </p>
         </div>
 
         <button

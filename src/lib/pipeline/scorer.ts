@@ -52,7 +52,7 @@ export function computeWeaknessScore(
 }
 
 export function computeWebsiteStatus(signals: Partial<Signals>): WebsiteStatus {
-  if (!signals.has_website) return 'none'
+  if (!signals.has_website) return signals.social_only ? 'social_only' : 'none'
   if (signals.social_only) return 'social_only'
 
   const year = signals.copyright_year ?? (signals.last_content_date ? parseInt(signals.last_content_date) : null)

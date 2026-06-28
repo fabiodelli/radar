@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { searchPlaces } from '@/lib/pipeline/places'
+import { searchPlaces, getPlaceDetails } from '@/lib/pipeline/places'
 import { fetchSiteSignals, classifyEmails, findSocialPresence } from '@/lib/pipeline/site-fetcher'
 import { fetchPageSpeed } from '@/lib/pipeline/pagespeed'
 import { computeWeaknessScore, computeWebsiteStatus } from '@/lib/pipeline/scorer'
@@ -17,9 +17,15 @@ async function delay(ms: number) {
   return new Promise(r => setTimeout(r, ms))
 }
 
+// Screenshot del sito dell'attività (immagine del LORO sito, non contenuto Google → persistibile).
+// Servizio gratuito on-demand: l'immagine viene generata quando la scheda la richiede.
+function buildScreenshotUrl(websiteUrl: string): string {
+  return `https://image.thum.io/get/width/640/crop/800/${websiteUrl}`
+}
+
 export async function POST(req: NextRequest) {
   const body: ScreeningQuery = await req.json()
-  const { categorie, comuni, threshold = 2 } = body
+  const { categorie, comuni, threshold = 2, includePageSpeed = false } = body
 
   if (!categorie?.length || !comuni?.length) {
     return new Response('categorie e comuni richiesti', { status: 400 })
@@ -78,17 +84,25 @@ export async function POST(req: NextRequest) {
             emit({ type: 'progress', place_id: place.place_id, message: `Analisi: ${place.name}...`, api_calls: apiCalls })
 
             try {
+              // Chiama Place Details: serve per il website (Text Search non lo restituisce)
+              // e per le recensioni (usate a runtime per score/angolo, MAI persistite).
+              let websiteUrl: string | undefined
+              let reviewText = ''
+              try {
+                const details = await getPlaceDetails(place.place_id)
+                websiteUrl = details.website ?? undefined
+                reviewText = (details.reviews ?? []).map(r => r.text).join(' \n ')
+                apiCalls += 1
+              } catch {
+                // Place Details fallita: procedi senza website/recensioni
+              }
+
               // Fetch sito
               let signals: Awaited<ReturnType<typeof fetchSiteSignals>> = { has_website: false }
-              const websiteUrl = place.website ?? null // viene da Text Search, non da Details
-              // Nota: place.website non è sempre disponibile in Text Search; si fa senza per ora
-              // Il website viene estratto dal sito stesso oppure lasciato null
-              const websiteFromSearch: string | undefined = (place as { website?: string }).website
 
-              if (websiteFromSearch) {
-                signals = await fetchSiteSignals(websiteFromSearch)
+              if (websiteUrl) {
+                signals = await fetchSiteSignals(websiteUrl)
               } else {
-                // Niente sito nella ricerca: segna come assente
                 signals = {
                   has_website: false,
                   social_only: false,
@@ -96,15 +110,15 @@ export async function POST(req: NextRequest) {
                   social_ig: null,
                   directory_listing: null,
                 }
-                const social = await findSocialPresence(place.name)
+                const social = await findSocialPresence(place.name, comune)
                 signals = { ...signals, ...social }
               }
 
-              // PageSpeed (solo se c'è sito, con throttle 500ms)
+              // PageSpeed (solo se c'è sito, attivato dal toggle, con throttle 500ms)
               let psiData: { psi_performance: number | null; psi_mobile_usability: boolean | null; psi_seo: number | null } = { psi_performance: null, psi_mobile_usability: null, psi_seo: null }
-              if (websiteFromSearch && signals.has_website) {
+              if (includePageSpeed && websiteUrl && signals.has_website) {
                 await delay(500)
-                psiData = await fetchPageSpeed(websiteFromSearch)
+                psiData = await fetchPageSpeed(websiteUrl)
                 apiCalls += 1
               }
 
@@ -115,8 +129,8 @@ export async function POST(req: NextRequest) {
               const { email_generic, email_nominative } = classifyEmails(emailsFound)
               const email_type = classifyEmailType(email_generic, email_nominative)
 
-              // Calcola score e status
-              const weakness_score = computeWeaknessScore(fullSignals, categoria)
+              // Calcola score e status (recensioni = "dolore documentato", runtime only)
+              const weakness_score = computeWeaknessScore(fullSignals, categoria, reviewText)
               const website_status = computeWebsiteStatus(fullSignals)
 
               // Salta se sotto soglia
@@ -125,19 +139,19 @@ export async function POST(req: NextRequest) {
                 continue
               }
 
-              // Canale e angolo
+              // Canale e angolo (le recensioni alimentano l'angolo più forte)
               const canale_consigliato = recommendChannel(fullSignals, email_generic)
-              const angolo_suggerito = generateAngolo(fullSignals, categoria)
+              const angolo_suggerito = generateAngolo(fullSignals, categoria, reviewText)
 
               // Provenienza
-              const provenienza = buildProvenanceList(fullSignals as Record<string, unknown>, websiteFromSearch ?? null)
+              const provenienza = buildProvenanceList(fullSignals as Record<string, unknown>, websiteUrl ?? null)
 
               // Upsert
               const { prospect, isNew } = await upsertProspectFromPipeline({
                 place_id:           place.place_id,
                 comune,
                 categoria,
-                website_url:        websiteFromSearch ?? null,
+                website_url:        websiteUrl ?? null,
                 website_status,
                 email_generic,
                 email_nominative,
@@ -146,7 +160,7 @@ export async function POST(req: NextRequest) {
                 weakness_score,
                 angolo_suggerito,
                 signals:            fullSignals,
-                screenshot_url:     null,
+                screenshot_url:     websiteUrl ? buildScreenshotUrl(websiteUrl) : null,
                 provenienza,
                 last_screened_at:   new Date().toISOString(),
               })

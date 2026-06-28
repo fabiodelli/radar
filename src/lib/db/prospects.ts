@@ -77,26 +77,27 @@ export async function upsertProspectFromPipeline(
     return { prospect: data as Prospect, isNew: false }
   }
 
+  const row = {
+    place_id:            pipelineData.place_id,
+    comune:              pipelineData.comune,
+    categoria:           pipelineData.categoria,
+    website_url:         pipelineData.website_url,
+    website_status:      pipelineData.website_status,
+    email_generic:       pipelineData.email_generic,
+    email_nominative:    pipelineData.email_nominative,
+    email_type:          pipelineData.email_type,
+    canale_consigliato:  pipelineData.canale_consigliato,
+    weakness_score:      pipelineData.weakness_score,
+    angolo_suggerito:    pipelineData.angolo_suggerito,
+    signals:             pipelineData.signals,
+    screenshot_url:      pipelineData.screenshot_url,
+    provenienza:         pipelineData.provenienza,
+    last_screened_at:    new Date().toISOString(),
+  }
   const { data, error } = await db
     .from('prospects')
     .upsert(
-      {
-        place_id:            pipelineData.place_id,
-        comune:              pipelineData.comune,
-        categoria:           pipelineData.categoria,
-        website_url:         pipelineData.website_url,
-        website_status:      pipelineData.website_status,
-        email_generic:       pipelineData.email_generic,
-        email_nominative:    pipelineData.email_nominative,
-        email_type:          pipelineData.email_type,
-        canale_consigliato:  pipelineData.canale_consigliato,
-        weakness_score:      pipelineData.weakness_score,
-        angolo_suggerito:    pipelineData.angolo_suggerito,
-        signals:             pipelineData.signals,
-        screenshot_url:      pipelineData.screenshot_url,
-        provenienza:         pipelineData.provenienza,
-        last_screened_at:    new Date().toISOString(),
-      },
+      row,
       {
         onConflict: 'place_id',
         // I campi Fabio (stato, note, flag_potenziale, ecc.) non sono inclusi:

@@ -27,7 +27,11 @@ export function generateAngolo(signals: Partial<Signals>, categoria: string, rev
   const angles: string[] = []
 
   if (!signals.has_website) {
-    angles.push('presenza online da costruire da zero — chi cerca questa attività non la trova sul web')
+    if (signals.social_only) {
+      angles.push('è presente solo sui social (Facebook/Instagram), senza un sito proprio — uno spazio controllato da loro intercetterebbe chi cerca su Google')
+    } else {
+      angles.push('presenza online da costruire da zero — chi cerca questa attività non la trova sul web')
+    }
   }
 
   if (signals.has_website) {

@@ -4,6 +4,7 @@ export interface ScreeningQuery {
   categorie: string[]
   comuni: string[]
   threshold?: number // weakness score minimo per includere, default 2
+  includePageSpeed?: boolean // se true esegue PageSpeed per ogni sito (più lento/costoso)
 }
 
 export interface ScreeningRun {

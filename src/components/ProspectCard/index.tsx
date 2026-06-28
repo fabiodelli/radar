@@ -51,7 +51,7 @@ export function ProspectCard({ prospect }: ProspectCardProps) {
       {/* Layout a due colonne */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Dossier tecnico */}
-        <SignalsDossier signals={prospect.signals} websiteUrl={prospect.website_url} />
+        <SignalsDossier signals={prospect.signals} websiteUrl={prospect.website_url} screenshotUrl={prospect.screenshot_url} />
 
         {/* Campi Fabio */}
         <EditableFields prospect={prospect} />

@@ -16,6 +16,7 @@ export function ActionBar({ prospect, liveData }: ActionBarProps) {
   const [mailText, setMailText] = useState<string | null>(null)
   const [auditText, setAuditText] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [mailModel, setMailModel] = useState<'haiku' | 'sonnet'>('sonnet')
 
   async function handleCopyRecap() {
     const text = buildRecapText(prospect, liveData)
@@ -31,7 +32,7 @@ export function ActionBar({ prospect, liveData }: ActionBarProps) {
       const res = await fetch('/api/generate/mail', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prospect, liveData }),
+        body: JSON.stringify({ prospect, liveData, model: mailModel }),
       })
       const json = await res.json()
       if (json.error) throw new Error(json.error)
@@ -62,12 +63,36 @@ export function ActionBar({ prospect, liveData }: ActionBarProps) {
     }
   }
 
+  // Account Gmail di Fabio (mittente)
+  const GMAIL_ACCOUNT = 'delli.fabio@gmail.com'
+
+  // Estrae oggetto e corpo dalla bozza generata (prima riga "Oggetto: ...").
+  function splitDraft(draft: string): { subject: string; body: string } {
+    const lines = draft.split('\n')
+    const idx = lines.findIndex(l => /^\s*oggetto\s*:/i.test(l))
+    if (idx === -1) {
+      return { subject: "Un'occhiata al vostro sito", body: draft.trim() }
+    }
+    const subject = lines[idx].replace(/^\s*oggetto\s*:/i, '').trim()
+    const body = lines.slice(idx + 1).join('\n').trim()
+    return { subject, body: body || draft.trim() }
+  }
+
   function handleApriFirma() {
     const emailDest = prospect.email_generic ?? prospect.email_nominative ?? ''
-    const oggetto = `Un'occhiata al vostro sito`
-    const corpo = mailText ?? buildRecapText(prospect, liveData)
-    const mailto = `mailto:${emailDest}?subject=${encodeURIComponent(oggetto)}&body=${encodeURIComponent(corpo)}`
-    window.open(mailto, '_blank')
+    const draft = mailText ?? buildRecapText(prospect, liveData)
+    const { subject, body } = mailText
+      ? splitDraft(mailText)
+      : { subject: "Un'occhiata al vostro sito", body: draft }
+
+    // Apre direttamente la finestra di composizione Gmail sull'account di Fabio
+    const gmailUrl =
+      `https://mail.google.com/mail/?authuser=${encodeURIComponent(GMAIL_ACCOUNT)}` +
+      `&view=cm&fs=1&tf=1` +
+      `&to=${encodeURIComponent(emailDest)}` +
+      `&su=${encodeURIComponent(subject)}` +
+      `&body=${encodeURIComponent(body)}`
+    window.open(gmailUrl, '_blank')
   }
 
   async function handleSuppression() {
@@ -91,13 +116,24 @@ export function ActionBar({ prospect, liveData }: ActionBarProps) {
           {copied ? 'Copiato!' : 'Copia recap'}
         </button>
 
-        <button
-          onClick={handleGeneraMail}
-          disabled={loadingMail}
-          className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-        >
-          {loadingMail ? 'Generazione...' : 'Genera mail'}
-        </button>
+        <div className="flex items-stretch rounded-md overflow-hidden border border-blue-600">
+          <button
+            onClick={handleGeneraMail}
+            disabled={loadingMail}
+            className="bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            {loadingMail ? 'Generazione...' : 'Genera mail'}
+          </button>
+          <select
+            value={mailModel}
+            onChange={e => setMailModel(e.target.value as 'haiku' | 'sonnet')}
+            title="Modello per la scrittura della mail"
+            className="border-l border-blue-500 bg-blue-50 px-2 text-xs font-medium text-blue-800 focus:outline-none cursor-pointer"
+          >
+            <option value="sonnet">Sonnet (qualità)</option>
+            <option value="haiku">Haiku (economico)</option>
+          </select>
+        </div>
 
         <button
           onClick={handleGeneraAudit}
@@ -112,7 +148,7 @@ export function ActionBar({ prospect, liveData }: ActionBarProps) {
             onClick={handleApriFirma}
             className="rounded-md border border-blue-300 bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-100"
           >
-            Apri nel client email
+            Apri in Gmail
           </button>
         )}
 

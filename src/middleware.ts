@@ -5,9 +5,10 @@ const ACCESS_PASSWORD = process.env.RADAR_PASSWORD ?? 'radar2024'
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
-  // Bypass: pagina login, API pubbliche, e asset statici
+  // Bypass: pagina login, API auth, e asset statici
   if (
     pathname.startsWith('/login') ||
+    pathname.startsWith('/api/auth/') ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon')
   ) {

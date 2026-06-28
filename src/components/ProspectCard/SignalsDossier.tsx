@@ -19,9 +19,10 @@ function Bool({ v }: { v: boolean | null | undefined }) {
 interface SignalsDossierProps {
   signals: Partial<Signals>
   websiteUrl?: string | null
+  screenshotUrl?: string | null
 }
 
-export function SignalsDossier({ signals: s, websiteUrl }: SignalsDossierProps) {
+export function SignalsDossier({ signals: s, websiteUrl, screenshotUrl }: SignalsDossierProps) {
   const year = s.copyright_year ?? (s.last_content_date ? parseInt(s.last_content_date) : null)
   const isOld = year ? (new Date().getFullYear() - year) >= 3 : false
 
@@ -30,11 +31,43 @@ export function SignalsDossier({ signals: s, websiteUrl }: SignalsDossierProps) 
       <div className="bg-gray-50 border-b border-gray-200 px-4 py-2">
         <h3 className="text-sm font-semibold text-gray-700">Dossier tecnico</h3>
       </div>
+
+      {/* Screenshot del sito (memoria visiva) */}
+      {s.has_website && screenshotUrl && (
+        <a href={websiteUrl ?? '#'} target="_blank" rel="noopener noreferrer" className="block border-b border-gray-100">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={screenshotUrl}
+            alt="Anteprima del sito"
+            loading="lazy"
+            className="w-full max-h-64 object-cover object-top bg-gray-50"
+          />
+        </a>
+      )}
+
       <div className="px-4 py-3">
         <table className="w-full">
           <tbody className="divide-y divide-gray-50">
             {!s.has_website ? (
-              <Row label="Sito web" value={<span className="font-semibold text-red-700">Nessun sito trovato</span>} highlight />
+              <>
+                <Row
+                  label="Sito web"
+                  value={<span className="font-semibold text-red-700">Nessun sito trovato</span>}
+                  highlight
+                />
+                {s.social_only && (
+                  <Row
+                    label="Presenza social"
+                    value={
+                      <span className="text-orange-700">
+                        Solo social
+                        {s.social_fb && <a href={s.social_fb} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline ml-2">Facebook</a>}
+                        {s.social_ig && <a href={s.social_ig} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline ml-2">Instagram</a>}
+                      </span>
+                    }
+                  />
+                )}
+              </>
             ) : (
               <>
                 <Row label="URL" value={
