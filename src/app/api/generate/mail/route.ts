@@ -3,26 +3,29 @@ import Anthropic from '@anthropic-ai/sdk'
 import type { Prospect } from '@/types/prospect'
 import type { LivePlaceData } from '@/types/google'
 import { buildRecapText } from '@/lib/handoff'
+import { resolveModel } from '@/lib/models'
 
-// Modelli selezionabili dalla scheda. Haiku = default economico; Sonnet = prosa più curata.
-const MODELS: Record<string, string> = {
-  haiku:  'claude-haiku-4-5-20251001',
-  sonnet: 'claude-sonnet-4-6',
-}
-const DEFAULT_MODEL = 'sonnet'
+const SYSTEM_PROMPT = `Scrivi una email di outreach B2B a freddo per conto di Fabio Delli, rivolta a imprenditori locali italiani.
 
-const SYSTEM_PROMPT = `Sei un consulente digitale che aiuta imprenditori locali italiani.
-Scrivi una email di outreach B2B a freddo per Fabio, titolare di un'agenzia web in Versilia.
+Chi è Fabio (usa per tono e posizionamento, non elencarlo meccanicamente):
+- Professionista digitale indipendente della Versilia, NON un'agenzia.
+- Interlocutore unico: segue ogni progetto in diretta dall'inizio alla fine, senza catene di referenti o account manager.
+- Niente pacchetti in serie: ogni intervento parte da un problema reale dell'attività.
+- Si occupa di siti web e soluzioni digitali, incluse integrazioni AI (assistenti multilingue, automazioni) quando portano valore concreto.
 
 Regole ferme:
 - Tono calmo, diretto, non commerciale. Servire, non vendere.
 - NON usare trattini lunghi (—), NON usare numeri o percentuali nel corpo.
-- NON usare la parola "artigiano" o "artigianale".
+- NON usare la parola "artigiano" o "artigianale". NON definire mai Fabio un'agenzia.
 - Inquadra sempre il divario come OPPORTUNITÀ, mai come colpa o critica.
+- Nella prima email NON parlare di costi, prezzo, budget né di "dove va l'investimento": il focus è il valore per LORO (es. più clienti raggiunti), non il modello di lavoro di Fabio. La leva economica si usa più avanti, di persona o nei follow-up.
 - Oggetto: breve, specifico, non generico.
-- Corpo: max 4 paragrafi corti. Primo paragrafo: chi sei e perché scrivi QUESTA email a LORO.
-- Firma: Fabio Delli — Agenzia web Versilia.
-- Restituisci SOLO l'email (oggetto + corpo), senza spiegazioni.`
+- Corpo: max 4 paragrafi corti. Primo paragrafo: chi è Fabio e perché scrive QUESTA email a LORO.
+- Chiudi con un invito al confronto senza impegno: una risposta a questa email o una breve telefonata, come preferiscono. Ricorda con naturalezza che il numero di telefono e gli altri contatti sono sul sito, per rendere facile mettersi in contatto. NON inserire il numero di telefono nel testo della mail.
+- Firma esattamente così, su righe separate:
+Fabio Delli
+www.fabiodelli.com
+- Restituisci SOLO l'email (oggetto + corpo + firma), senza spiegazioni.`
 
 export async function POST(req: NextRequest) {
   // Flag fase 2: useWebSearch (non attivo in v1, struttura predisposta)
@@ -33,7 +36,7 @@ export async function POST(req: NextRequest) {
   } = await req.json()
 
   const recap = buildRecapText(prospect, liveData)
-  const modelId = MODELS[model ?? DEFAULT_MODEL] ?? MODELS[DEFAULT_MODEL]
+  const modelId = resolveModel(model)
 
   const client = new Anthropic()
 
