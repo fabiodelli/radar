@@ -84,8 +84,9 @@ CREATE TABLE screening_runs (
 );
 
 -- ============================================================
--- RLS: strumento personale, uso service role key server-side
--- Disabilitato per semplicità; la protezione è nel middleware auth.
+-- RLS: l'app usa SOLO la service role key lato server (bypassa RLS).
+-- Abilitiamo RLS senza policy = deny-all per anon/authenticated, così il DB
+-- non è raggiungibile con la sola anon key. Vedi anche supabase/enable-rls.sql.
 -- ============================================================
-ALTER TABLE prospects DISABLE ROW LEVEL SECURITY;
-ALTER TABLE screening_runs DISABLE ROW LEVEL SECURITY;
+ALTER TABLE prospects ENABLE ROW LEVEL SECURITY;
+ALTER TABLE screening_runs ENABLE ROW LEVEL SECURITY;

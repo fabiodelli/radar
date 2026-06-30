@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { sessionToken } from '@/lib/auth'
 
 const ACCESS_PASSWORD = process.env.RADAR_PASSWORD ?? 'radar2024'
 
@@ -10,7 +11,7 @@ export async function POST(req: NextRequest) {
   }
 
   const res = NextResponse.json({ ok: true })
-  res.cookies.set('radar_session', ACCESS_PASSWORD, {
+  res.cookies.set('radar_session', await sessionToken(ACCESS_PASSWORD), {
     httpOnly: true,
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',

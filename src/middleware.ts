@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { sessionToken } from '@/lib/auth'
 
 const ACCESS_PASSWORD = process.env.RADAR_PASSWORD ?? 'radar2024'
 
-export function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
   // Bypass: pagina login, API auth, e asset statici
@@ -15,9 +16,9 @@ export function middleware(req: NextRequest) {
     return NextResponse.next()
   }
 
-  // Verifica cookie di sessione semplice
+  // Verifica cookie di sessione (hash della password, mai la password in chiaro)
   const session = req.cookies.get('radar_session')
-  if (session?.value === ACCESS_PASSWORD) {
+  if (session?.value === await sessionToken(ACCESS_PASSWORD)) {
     return NextResponse.next()
   }
 
