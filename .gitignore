@@ -20,6 +20,9 @@
 # production
 /build
 
+# eseguibile Radar (contiene segreti in .env.local)
+/dist-app/
+
 # misc
 .DS_Store
 *.pem

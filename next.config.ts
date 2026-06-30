@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Produce un server Node autonomo in .next/standalone (impacchettato in Radar.exe).
+  output: "standalone",
 };
 
 export default nextConfig;
