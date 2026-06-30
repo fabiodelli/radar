@@ -13,25 +13,49 @@ export interface SearchPlacesResult {
   apiCalls: number
 }
 
-// Text Search: restituisce lista di attività per categoria + comune
+const MAX_PAGES = 3 // Google offre fino a 3 pagine (~60 risultati) via next_page_token
+
+function delay(ms: number) {
+  return new Promise(r => setTimeout(r, ms))
+}
+
+// Text Search: restituisce lista di attività per categoria + comune.
+// Segue next_page_token fino a ~60 risultati (Google richiede una breve attesa
+// prima che il token diventi valido).
 export async function searchPlaces(
   categoria: string,
   comune: string
 ): Promise<SearchPlacesResult> {
   const query = encodeURIComponent(`${categoria} ${comune} Italia`)
-  const url = `${PLACES_BASE}/textsearch/json?query=${query}&language=it&region=it&key=${apiKey()}`
+  const results: PlacesTextSearchResult[] = []
+  let apiCalls = 0
+  let pageToken: string | undefined
 
-  const res = await fetch(url, { signal: AbortSignal.timeout(10000) })
-  const json = await res.json()
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const url = pageToken
+      ? `${PLACES_BASE}/textsearch/json?pagetoken=${pageToken}&key=${apiKey()}`
+      : `${PLACES_BASE}/textsearch/json?query=${query}&language=it&region=it&key=${apiKey()}`
 
-  if (json.status !== 'OK' && json.status !== 'ZERO_RESULTS') {
-    throw new Error(`Places Text Search: ${json.status} — ${json.error_message ?? ''}`)
+    const res = await fetch(url, { signal: AbortSignal.timeout(10000) })
+    const json = await res.json()
+    apiCalls += 1
+
+    if (json.status !== 'OK' && json.status !== 'ZERO_RESULTS') {
+      // Token non ancora valido o altro errore su pagine successive: ferma e restituisci quanto raccolto.
+      if (page > 0) break
+      throw new Error(`Places Text Search: ${json.status} — ${json.error_message ?? ''}`)
+    }
+
+    results.push(...((json.results ?? []) as PlacesTextSearchResult[]))
+
+    pageToken = json.next_page_token
+    if (!pageToken) break
+
+    // Il next_page_token diventa valido solo dopo un breve ritardo lato Google.
+    await delay(2000)
   }
 
-  return {
-    results: (json.results ?? []) as PlacesTextSearchResult[],
-    apiCalls: 1,
-  }
+  return { results, apiCalls }
 }
 
 // Place Details: usato per arricchire la card a runtime (MAI persistito)

@@ -36,6 +36,11 @@ export function ScreeningRunner() {
   const [stats, setStats] = useState<{ n_trovati: number; n_nuovi: number } | null>(null)
   const logRef = useRef<HTMLDivElement>(null)
   const logId = useRef(0)
+  const abortRef = useRef<AbortController | null>(null)
+
+  function stopScreening() {
+    abortRef.current?.abort()
+  }
 
   function addLog(entry: Omit<LogEntry, 'id'>) {
     logId.current++
@@ -72,11 +77,15 @@ export function ScreeningRunner() {
 
     const body: ScreeningQuery = { categorie, comuni, threshold, includePageSpeed }
 
+    const ac = new AbortController()
+    abortRef.current = ac
+
     try {
       const res = await fetch('/api/screening/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
+        signal: ac.signal,
       })
 
       if (!res.body) throw new Error('No response body')
@@ -113,9 +122,14 @@ export function ScreeningRunner() {
         }
       }
     } catch (e) {
-      addLog({ type: 'error', message: 'Errore connessione: ' + (e instanceof Error ? e.message : String(e)) })
+      if (e instanceof DOMException && e.name === 'AbortError') {
+        addLog({ type: 'complete', message: 'Screening interrotto' })
+      } else {
+        addLog({ type: 'error', message: 'Errore connessione: ' + (e instanceof Error ? e.message : String(e)) })
+      }
     } finally {
       setRunning(false)
+      abortRef.current = null
     }
   }
 
@@ -213,13 +227,23 @@ export function ScreeningRunner() {
           </p>
         </div>
 
-        <button
-          onClick={startScreening}
-          disabled={running || !categorie.length || !comuni.length}
-          className="rounded-md bg-gray-900 px-5 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {running ? 'Screening in corso...' : 'Avvia screening'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={startScreening}
+            disabled={running || !categorie.length || !comuni.length}
+            className="rounded-md bg-gray-900 px-5 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {running ? 'Screening in corso...' : 'Avvia screening'}
+          </button>
+          {running && (
+            <button
+              onClick={stopScreening}
+              className="rounded-md border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+            >
+              Stop
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Contatore chiamate API */}

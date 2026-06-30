@@ -14,21 +14,43 @@ function isNominativeEmail(email: string): boolean {
   return !genericPrefixes.some(p => local === p || local.startsWith(p + '.') || local.startsWith(p + '_'))
 }
 
-function extractYear(text: string): number | null {
+export function extractYear(text: string): number | null {
   const m = text.match(/\b(19|20)\d{2}\b/g)
   if (!m) return null
-  return Math.max(...m.map(Number))
+  // Ignora anni futuri (date errate, script, JSON-LD): tieni solo <= anno corrente.
+  const currentYear = new Date().getFullYear()
+  const valid = m.map(Number).filter(y => y >= 1990 && y <= currentYear)
+  if (valid.length === 0) return null
+  return Math.max(...valid)
 }
 
-function resolveUrl(url: string, base: string): string {
+// Valida un numero come telefono italiano plausibile, scartando spazzatura
+// (segnaposto 000000001, ID/codici a 12+ cifre, sequenze di sole cifre uguali).
+export function isPlausibleItalianPhone(raw: string): boolean {
+  const digits = raw.replace(/\D/g, '').replace(/^(?:0039|39)(?=\d{9,})/, '')
+  if (!/^[03]/.test(digits)) return false          // fisso (0) o mobile (3)
+  if (digits.length < 9 || digits.length > 11) return false
+  if (digits.startsWith('00')) return false         // i numeri italiani non iniziano per 00
+  if (/^(\d)\1+$/.test(digits) || /^0+\d?$/.test(digits)) return false // tutte uguali / quasi-zero
+  return true
+}
+
+// Normalizza la URL che arriva da Google Places: spesso è senza schema (www.esempio.it)
+// o dichiarata http:// anche se il sito serve https. Default https:// se manca lo schema.
+export function normalizeWebsiteUrl(raw: string): URL | null {
+  const trimmed = raw.trim()
+  if (!trimmed) return null
+  const withScheme = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`
   try {
-    return new URL(url, base).toString()
+    return new URL(withScheme)
   } catch {
-    return url
+    return null
   }
 }
 
-async function fetchPage(url: string): Promise<string | null> {
+// Fetch di una pagina seguendo i redirect. Ritorna anche la URL finale (res.url),
+// indispensabile per sapere se il sito serve davvero HTTPS dopo l'eventuale redirect.
+async function fetchPage(url: string): Promise<{ html: string; finalUrl: string } | null> {
   try {
     const res = await fetch(url, {
       signal: AbortSignal.timeout(TIMEOUT_MS),
@@ -38,33 +60,49 @@ async function fetchPage(url: string): Promise<string | null> {
     if (!res.ok) return null
     const ct = res.headers.get('content-type') ?? ''
     if (!ct.includes('text/html')) return null
-    return await res.text()
+    return { html: await res.text(), finalUrl: res.url || url }
   } catch {
     return null
   }
 }
 
+// Prova a recuperare le pagine candidate da un dato origin (in parallelo).
+// Ritorna gli HTML utili e la URL finale della prima risposta valida (per il check HTTPS).
+async function fetchPagesFrom(origin: string): Promise<{ htmlPages: string[]; finalUrl: string | null }> {
+  const results = await Promise.all(PAGES_TO_TRY.map(path => fetchPage(origin + path)))
+  const htmlPages: string[] = []
+  let finalUrl: string | null = null
+  for (const r of results) {
+    if (!r) continue
+    if (!finalUrl) finalUrl = r.finalUrl
+    htmlPages.push(r.html)
+    if (htmlPages.length >= 3) break
+  }
+  return { htmlPages, finalUrl }
+}
+
 export async function fetchSiteSignals(websiteUrl: string): Promise<Partial<Signals>> {
-  let baseUrl: URL
-  try {
-    baseUrl = new URL(websiteUrl)
-  } catch {
+  const baseUrl = normalizeWebsiteUrl(websiteUrl)
+  if (!baseUrl) {
     return { has_website: false, fetch_error: 'URL non valida' }
   }
 
-  const https = baseUrl.protocol === 'https:'
-  const htmlPages: string[] = []
-
-  for (const path of PAGES_TO_TRY) {
-    const html = await fetchPage(baseUrl.origin + path)
-    if (html) htmlPages.push(html)
-    if (htmlPages.length >= 3) break
+  // Prova SEMPRE prima HTTPS, ignorando lo schema dichiarato da Google Places:
+  // molti siti servono http 200 senza redirect pur avendo https disponibile.
+  // Solo se https non risponde affatto si ricade su http (siti solo-http, rari).
+  let https: boolean | null
+  let htmlPages = (await fetchPagesFrom(`https://${baseUrl.host}`)).htmlPages
+  if (htmlPages.length > 0) {
+    https = true
+  } else {
+    htmlPages = (await fetchPagesFrom(`http://${baseUrl.host}`)).htmlPages
+    https = htmlPages.length > 0 ? false : null
   }
 
   if (htmlPages.length === 0) {
     return {
       has_website: true,
-      https,
+      https, // null se non abbiamo mai avuto una risposta: non penalizziamo un sito solo lento
       fetch_error: 'Sito non raggiungibile',
       mobile_viewport: null,
     }
@@ -73,19 +111,35 @@ export async function fetchSiteSignals(websiteUrl: string): Promise<Partial<Sign
   const mainHtml = htmlPages[0]
   const $ = cheerio.load(mainHtml)
 
-  // Viewport / responsive
+  // Viewport / responsive — escludi viewport con larghezza fissa "desktop" (es. width=1024)
   const viewport = $('meta[name="viewport"]').attr('content') ?? null
-  const mobile_viewport = !!viewport
+  let mobile_viewport = !!viewport
+  if (viewport) {
+    const fixedWidth = viewport.match(/width\s*=\s*(\d+)/i)
+    if (fixedWidth && Number(fixedWidth[1]) >= 1000) mobile_viewport = false
+  }
 
-  // Tech stack
+  // Tech stack — rileva da meta generator + marker di asset specifici (path/CDN reali),
+  // non dalla semplice parola nell'HTML (evita falsi positivi).
   const tech_stack: string[] = []
   const generator = $('meta[name="generator"]').attr('content') ?? ''
-  if (/wordpress/i.test(generator)) tech_stack.push('WordPress')
-  if (/wix/i.test(mainHtml)) tech_stack.push('Wix')
-  if (/squarespace/i.test(mainHtml)) tech_stack.push('Squarespace')
-  if (/shopify/i.test(mainHtml)) tech_stack.push('Shopify')
-  if (/joomla/i.test(generator)) tech_stack.push('Joomla')
-  if (/<object.*?swf|\.swf/i.test(mainHtml)) tech_stack.push('Flash (residui!)')
+  const html = mainHtml.toLowerCase()
+  if (/wordpress/i.test(generator) || html.includes('/wp-content/') || html.includes('/wp-includes/')) {
+    tech_stack.push('WordPress')
+  }
+  if (/wix\.com/i.test(generator) || html.includes('static.wixstatic.com') || html.includes('static.parastorage.com')) {
+    tech_stack.push('Wix')
+  }
+  if (/squarespace/i.test(generator) || html.includes('static1.squarespace.com') || html.includes('squarespace.com/universal')) {
+    tech_stack.push('Squarespace')
+  }
+  if (/shopify/i.test(generator) || html.includes('cdn.shopify.com') || html.includes('myshopify.com')) {
+    tech_stack.push('Shopify')
+  }
+  if (/joomla/i.test(generator) || html.includes('/media/jui/') || html.includes('option=com_')) {
+    tech_stack.push('Joomla')
+  }
+  if (/\.swf(["'?\s]|$)/i.test(mainHtml)) tech_stack.push('Flash (residui!)')
 
   // Lingue
   const lang_versions: string[] = []
@@ -124,20 +178,37 @@ export async function fetchSiteSignals(websiteUrl: string): Promise<Partial<Sign
   // Email addresses
   const allText = htmlPages.join(' ')
   const emailRegex = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g
-  const emails_found = [...new Set(allText.match(emailRegex) ?? [])]
-    .filter(e => !e.endsWith('.png') && !e.endsWith('.jpg'))
 
-  // Phone numbers — preferisci i link tel: (affidabili), poi un fallback ristretto sul testo
+  // 1. Link mailto: (fonte più affidabile)
+  const emailSet = new Set<string>()
+  $('a[href^="mailto:"]').each((_, el) => {
+    const addr = ($(el).attr('href') ?? '').replace(/^mailto:/i, '').split('?')[0].trim()
+    if (addr && emailRegex.test(addr)) emailSet.add(addr.toLowerCase())
+    emailRegex.lastIndex = 0
+  })
+
+  // 2. Email offuscate: normalizza i pattern comuni prima del match (nome [at] dominio [dot] it, &#64;)
+  const deobfuscated = allText
+    .replace(/&#64;|&#x40;/gi, '@')
+    .replace(/\s*[\[(]\s*(?:at|chiocciola)\s*[\])]\s*/gi, '@')
+    .replace(/\s*[\[(]\s*(?:dot|punto)\s*[\])]\s*/gi, '.')
+
+  // 3. Regex su testo deoffuscato
+  for (const e of deobfuscated.match(emailRegex) ?? []) emailSet.add(e.toLowerCase())
+
+  const emails_found = [...emailSet]
+    .filter(e => !e.endsWith('.png') && !e.endsWith('.jpg') && !e.endsWith('.gif'))
+
+  // Phone numbers — link tel: e fallback testuale, entrambi validati (anche i tel: possono
+  // contenere segnaposto tipo 000000001).
   const phoneSet = new Set<string>()
   $('a[href^="tel:"]').each((_, el) => {
     const raw = ($(el).attr('href') ?? '').replace(/^tel:/, '').trim()
-    if (raw) phoneSet.add(raw)
+    if (raw && isPlausibleItalianPhone(raw)) phoneSet.add(raw)
   })
-  // Fallback testuale: numeri italiani plausibili (prefisso +39 o 0/3 iniziale, 8-11 cifre)
   const phoneRegex = /(?:\+39[\s.\-]?)?(?:0\d{1,3}|3\d{2})[\s.\-]?\d{5,8}/g
   for (const m of allText.match(phoneRegex) ?? []) {
-    const digits = m.replace(/\D/g, '')
-    if (digits.length >= 8 && digits.length <= 13) phoneSet.add(m.trim())
+    if (isPlausibleItalianPhone(m)) phoneSet.add(m.trim())
   }
   const phones_found = [...phoneSet].slice(0, 5)
 
@@ -145,13 +216,9 @@ export async function fetchSiteSignals(websiteUrl: string): Promise<Partial<Sign
   const footerText = $('footer').text() + $('[class*="footer"]').text()
   const copyright_year = extractYear(footerText) ?? extractYear(allText)
 
-  // Data contenuto più recente
-  const datePatterns = [
-    ...(allText.match(/\b(20\d{2})\b/g) ?? []),
-  ]
-  const last_content_date = datePatterns.length > 0
-    ? String(Math.max(...datePatterns.map(Number)))
-    : null
+  // Data contenuto più recente — stesso cap di extractYear (ignora anni futuri tipo 2099/2048)
+  const latestYear = extractYear(allText)
+  const last_content_date = latestYear ? String(latestYear) : null
 
   // Stima pagine (conteggio link interni unici)
   const internalLinks = new Set<string>()
