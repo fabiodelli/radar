@@ -5,6 +5,33 @@ import type { Prospect } from '@/types/prospect'
 import type { LivePlaceData } from '@/types/google'
 import { buildRecapText } from '@/lib/handoff'
 
+// Numero in formato internazionale per wa.me (solo cifre, con prefisso 39).
+// Ritorna null se non c'è un numero italiano plausibile.
+function waDigits(live: LivePlaceData | null): string | null {
+  if (!live) return null
+  let digits: string
+  if (live.phone_intl) {
+    digits = live.phone_intl.replace(/\D/g, '')      // già internazionale (+39…)
+  } else if (live.phone) {
+    digits = '39' + live.phone.replace(/\D/g, '')     // nazionale → anteponi il prefisso Italia
+  } else {
+    return null
+  }
+  if (!/^39\d{9,11}$/.test(digits)) return null       // formato italiano plausibile
+  if (/^(\d)\1+$/.test(digits)) return null           // scarta cifre tutte uguali
+  return digits
+}
+
+// Suggerimento: WhatsApp è più probabile sui cellulari (3xx) che sui fissi (0xx).
+function phoneHint(live: LivePlaceData | null): 'cellulare' | 'fisso' | null {
+  const d = waDigits(live)
+  if (!d) return null
+  const national = d.slice(2)
+  if (national.startsWith('3')) return 'cellulare'
+  if (national.startsWith('0')) return 'fisso'
+  return null
+}
+
 interface ActionBarProps {
   prospect: Prospect
   liveData: LivePlaceData | null
@@ -15,6 +42,8 @@ export function ActionBar({ prospect, liveData }: ActionBarProps) {
   const [loadingAudit, setLoadingAudit] = useState(false)
   const [mailText, setMailText] = useState<string | null>(null)
   const [auditText, setAuditText] = useState<string | null>(null)
+  const [waText, setWaText] = useState<string | null>(null)
+  const [loadingWa, setLoadingWa] = useState(false)
   const [copied, setCopied] = useState(false)
   const [mailModel, setMailModel] = useState<'haiku' | 'sonnet'>('sonnet')
 
@@ -63,6 +92,35 @@ export function ActionBar({ prospect, liveData }: ActionBarProps) {
     }
   }
 
+  async function handleGeneraWhatsApp() {
+    setLoadingWa(true)
+    setWaText(null)
+    try {
+      const res = await fetch('/api/generate/whatsapp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prospect, liveData }),
+      })
+      const json = await res.json()
+      if (json.error) throw new Error(json.error)
+      setWaText(json.text)
+    } catch (e) {
+      alert('Errore generazione messaggio WhatsApp: ' + (e instanceof Error ? e.message : String(e)))
+    } finally {
+      setLoadingWa(false)
+    }
+  }
+
+  function handleApriWhatsApp() {
+    const digits = waDigits(liveData)
+    if (!digits) {
+      alert('Numero non disponibile per WhatsApp')
+      return
+    }
+    const url = `https://wa.me/${digits}${waText ? `?text=${encodeURIComponent(waText)}` : ''}`
+    window.open(url, '_blank')
+  }
+
   // Account Gmail di Fabio (mittente)
   const GMAIL_ACCOUNT = 'delli.fabio@gmail.com'
 
@@ -105,6 +163,9 @@ export function ActionBar({ prospect, liveData }: ActionBarProps) {
     window.location.href = '/'
   }
 
+  const waNum = waDigits(liveData)
+  const waLabel = phoneHint(liveData)
+
   return (
     <div className="space-y-4">
       {/* Azioni principali */}
@@ -143,12 +204,32 @@ export function ActionBar({ prospect, liveData }: ActionBarProps) {
           {loadingAudit ? 'Generazione...' : 'Genera mini-audit'}
         </button>
 
+        {waNum && (
+          <button
+            onClick={handleGeneraWhatsApp}
+            disabled={loadingWa}
+            className="rounded-md border border-green-600 bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+          >
+            {loadingWa ? 'Generazione...' : 'Genera messaggio WhatsApp'}
+          </button>
+        )}
+
         {(mailText || prospect.email_generic) && (
           <button
             onClick={handleApriFirma}
             className="rounded-md border border-blue-300 bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-100"
           >
             Apri in Gmail
+          </button>
+        )}
+
+        {waNum && (
+          <button
+            onClick={handleApriWhatsApp}
+            title={waLabel ? `Numero ${waLabel} — WhatsApp è più probabile sui cellulari` : undefined}
+            className="rounded-md border border-green-300 bg-green-50 px-3 py-1.5 text-sm font-medium text-green-700 hover:bg-green-100"
+          >
+            Apri WhatsApp{waLabel ? ` (${waLabel})` : ''}
           </button>
         )}
 
@@ -173,6 +254,22 @@ export function ActionBar({ prospect, liveData }: ActionBarProps) {
             </button>
           </div>
           <pre className="text-sm text-gray-800 whitespace-pre-wrap font-sans">{mailText}</pre>
+        </div>
+      )}
+
+      {/* Messaggio WhatsApp generato */}
+      {waText && (
+        <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="text-sm font-semibold text-green-900">Messaggio WhatsApp</h4>
+            <button
+              onClick={() => navigator.clipboard.writeText(waText)}
+              className="text-xs text-green-700 hover:underline"
+            >
+              Copia testo
+            </button>
+          </div>
+          <pre className="text-sm text-gray-800 whitespace-pre-wrap font-sans">{waText}</pre>
         </div>
       )}
 

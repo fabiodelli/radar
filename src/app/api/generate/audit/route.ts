@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     const client = new Anthropic()
     const msg = await client.messages.create({
       model: resolveModel('sonnet'),
-      max_tokens: 600,
+      max_tokens: 1200, // margine per il thinking adattivo di Sonnet 5 + testo completo
       system: SYSTEM_PROMPT,
       messages: [
         {

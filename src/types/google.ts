@@ -54,6 +54,7 @@ export interface LivePlaceData {
   name: string
   formatted_address: string
   phone: string | null
+  phone_intl: string | null
   website: string | null
   rating: number | null
   user_ratings_total: number | null

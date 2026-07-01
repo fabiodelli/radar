@@ -19,6 +19,7 @@ Regole ferme:
 - NON usare la parola "artigiano" o "artigianale". NON definire mai Fabio un'agenzia.
 - Descrivi il divario SOLO come opportunità concreta, in positivo. NON usare mai parole come "critica", "colpa", "problema", "giudizio", "difetto", "errore" — nemmeno per negarle: scrivere "non è una critica" evoca comunque l'idea di critica. Non nominare ciò che il messaggio NON è; punta dritto a ciò che si può guadagnare.
 - Nella prima email NON parlare di costi, prezzo, budget né di "dove va l'investimento": il focus è il valore per LORO (es. più clienti raggiunti), non il modello di lavoro di Fabio. La leva economica si usa più avanti, di persona o nei follow-up.
+- NON pre-impegnarti sull'entità dell'intervento: non promettere di conservare il sito esistente, non dire cose come "non serve rifare tutto da capo" o "solo piccoli ritocchi". A seconda del caso l'intervento può essere una realizzazione nuova da zero oppure un aggiornamento dell'esistente: lascia lo scope aperto e parla del risultato per loro, non di quanto lavoro comporta.
 - Oggetto: breve, specifico, non generico.
 - Corpo: max 4 paragrafi corti. Primo paragrafo: chi è Fabio e perché scrive QUESTA email a LORO.
 - Chiudi con un invito al confronto senza impegno: una risposta a questa email o una breve telefonata, come preferiscono. Ricorda con naturalezza che il numero di telefono e gli altri contatti sono sul sito, per rendere facile mettersi in contatto. NON inserire il numero di telefono nel testo della mail.
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest) {
   try {
     const msg = await client.messages.create({
       model: modelId,
-      max_tokens: 800,
+      max_tokens: 2000, // margine per il thinking adattivo di Sonnet 5 + testo completo
       system: SYSTEM_PROMPT,
       messages: [
         {

@@ -89,6 +89,7 @@ export async function getPlaceDetails(placeId: string): Promise<LivePlaceData> {
     name:               r.name,
     formatted_address:  r.formatted_address,
     phone:              r.formatted_phone_number ?? r.international_phone_number ?? null,
+    phone_intl:         r.international_phone_number ?? null,
     website:            r.website ?? null,
     rating:             r.rating ?? null,
     user_ratings_total: r.user_ratings_total ?? null,
