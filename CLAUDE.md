@@ -21,7 +21,7 @@
 ## Stack
 - Next.js App Router + TypeScript + Tailwind CSS
 - Supabase (Postgres) — service role key solo server-side
-- Anthropic SDK: `claude-sonnet-4-6` per mail e mini-audit (Haiku selezionabile per la mail). Model id centralizzati in `src/lib/models.ts`.
+- Anthropic SDK: `claude-sonnet-5` per mail e mini-audit (Haiku selezionabile per la mail). Model id centralizzati in `src/lib/models.ts`.
 
 ## Struttura chiave
 - `src/lib/pipeline/` — moduli screening (places, site-fetcher, pagespeed, scorer, recommender)

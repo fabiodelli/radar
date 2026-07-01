@@ -1,8 +1,8 @@
 // Model id Anthropic centralizzati, usati da mail e mini-audit.
-// Haiku = economico; Sonnet 4.6 = miglior rapporto qualità/prezzo per compiti con ragionamento.
+// Haiku = economico; Sonnet 5 = miglior rapporto qualità/prezzo per compiti con ragionamento.
 export const MODELS: Record<string, string> = {
   haiku:  'claude-haiku-4-5-20251001',
-  sonnet: 'claude-sonnet-4-6',
+  sonnet: 'claude-sonnet-5',
 }
 
 export const DEFAULT_MODEL = 'sonnet'

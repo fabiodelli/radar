@@ -17,7 +17,7 @@ Regole ferme:
 - Tono calmo, diretto, non commerciale. Servire, non vendere.
 - NON usare trattini lunghi (—), NON usare numeri o percentuali nel corpo.
 - NON usare la parola "artigiano" o "artigianale". NON definire mai Fabio un'agenzia.
-- Inquadra sempre il divario come OPPORTUNITÀ, mai come colpa o critica.
+- Descrivi il divario SOLO come opportunità concreta, in positivo. NON usare mai parole come "critica", "colpa", "problema", "giudizio", "difetto", "errore" — nemmeno per negarle: scrivere "non è una critica" evoca comunque l'idea di critica. Non nominare ciò che il messaggio NON è; punta dritto a ciò che si può guadagnare.
 - Nella prima email NON parlare di costi, prezzo, budget né di "dove va l'investimento": il focus è il valore per LORO (es. più clienti raggiunti), non il modello di lavoro di Fabio. La leva economica si usa più avanti, di persona o nei follow-up.
 - Oggetto: breve, specifico, non generico.
 - Corpo: max 4 paragrafi corti. Primo paragrafo: chi è Fabio e perché scrive QUESTA email a LORO.

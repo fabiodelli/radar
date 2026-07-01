@@ -11,8 +11,8 @@
 - [x] Vista lista (ordinamento weakness/comune, filtri rapidi, raggruppamento per comune)
 - [x] Vista scheda (dossier tecnico + campi editabili Fabio + azioni)
 - [x] "Copia recap" genera l'handoff completo — `src/lib/handoff.ts`
-- [x] "Genera mail" chiama Anthropic API (claude-sonnet-4-6; Haiku selezionabile)
-- [x] "Genera mini-audit" — Sonnet 4.6 sui signals, con fallback deterministico
+- [x] "Genera mail" chiama Anthropic API (claude-sonnet-5; Haiku selezionabile)
+- [x] "Genera mini-audit" — Sonnet 5 sui signals, con fallback deterministico
 - [x] "Apri in Gmail" — apre la composizione Gmail (delli.fabio@gmail.com) precompilata
 - [x] Provenienza dati registrata; etichetta generic/nominative sulle email
 - [x] Contatore chiamate API sessione visibile nello screening runner
@@ -42,8 +42,8 @@ src/
     api/
       screening/run/  — SSE pipeline endpoint
       places/         — proxy Place Details (chiave server-side)
-      generate/mail   — Anthropic Sonnet 4.6 (Haiku selezionabile)
-      generate/audit  — Anthropic Sonnet 4.6 (fallback deterministico)
+      generate/mail   — Anthropic Sonnet 5 (Haiku selezionabile)
+      generate/audit  — Anthropic Sonnet 5 (fallback deterministico)
       prospects/      — CRUD
       auth/login      — cookie session
     page.tsx          — lista con filtri
