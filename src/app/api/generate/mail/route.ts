@@ -53,7 +53,13 @@ export async function POST(req: NextRequest) {
       ],
     })
 
-    const text = msg.content[0].type === 'text' ? msg.content[0].text : ''
+    // Sonnet 5 usa thinking adattivo: la risposta può iniziare con un blocco 'thinking'.
+    // Prendi il testo dai blocchi 'text', non da content[0].
+    const text = msg.content
+      .filter(b => b.type === 'text')
+      .map(b => (b.type === 'text' ? b.text : ''))
+      .join('')
+      .trim()
     return NextResponse.json({ text })
   } catch (e: unknown) {
     return NextResponse.json(
