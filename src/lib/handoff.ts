@@ -37,9 +37,15 @@ export function buildRecapText(prospect: Prospect, live: LivePlaceData | null): 
     if (s.psi_performance !== null && s.psi_performance !== undefined) {
       lines.push(`- Performance mobile (PSI): ${s.psi_performance}/100`)
     }
-    if (!s.has_contact_form) lines.push('- Nessun modulo di contatto')
-    if (!s.has_booking) lines.push('- Nessun sistema di prenotazione')
-    if (!s.has_ecommerce) lines.push('- Nessun e-commerce')
+    // Solo assenze VERIFICATE (false), mai dedotte da mancata verifica (null)
+    if (s.has_contact_form === false) lines.push('- Nessun modulo di contatto')
+    if (s.has_booking === false) lines.push('- Nessun sistema di prenotazione')
+    if (s.has_ecommerce === false) lines.push('- Nessun e-commerce')
+    if (s.seo_description === false && s.seo_h1 === false) {
+      lines.push('- SEO base assente (manca meta description e H1): poco leggibile da Google')
+    }
+    if (s.pages_fetched?.length) lines.push(`- Pagine analizzate: ${s.pages_fetched.length}`)
+    if (s.fetch_error) lines.push(`- Nota analisi: ${s.fetch_error}`)
   }
   lines.push('')
 
@@ -109,11 +115,15 @@ export function buildMiniAudit(prospect: Prospect): string {
     if (s.psi_performance !== null && s.psi_performance !== undefined && s.psi_performance < 50) {
       items.push(`Il sito è lento (${s.psi_performance}/100 su mobile): un visitatore su due abbandona se una pagina ci mette più di 3 secondi`)
     }
-    if (!s.has_contact_form && !s.has_booking) {
+    // Solo assenze VERIFICATE (false): un'affermazione sbagliata nell'audit brucia il lead
+    if (s.has_contact_form === false && s.has_booking === false) {
       items.push('Non c\'è un modulo di contatto né un sistema di prenotazione: le richieste arrivano solo per telefono e alcune si perdono')
     }
+    if (s.seo_description === false && s.seo_h1 === false) {
+      items.push('Il sito è poco leggibile da Google (manca la descrizione nei risultati di ricerca): chi cerca la categoria in zona fatica a trovarlo')
+    }
     const isExport = ['marmo', 'nautica', 'marble', 'stone'].some(c => (prospect.categoria ?? '').toLowerCase().includes(c))
-    if (isExport && !(s.lang_versions ?? []).some(l => l.startsWith('en') || l.startsWith('de'))) {
+    if (isExport && s.lang_versions !== undefined && !s.lang_versions.some(l => l.startsWith('en') || l.startsWith('de'))) {
       items.push('Il sito è solo in italiano: manca la versione inglese o tedesca per intercettare clienti internazionali, rilevante per questo settore')
     }
   }

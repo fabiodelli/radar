@@ -97,6 +97,29 @@ export function SignalsDossier({ signals: s, websiteUrl, screenshotUrl }: Signal
                 <Row label="Pagine interne (stima)" value={s.page_count_estimate ?? '—'} />
                 <Row label="Email trovate sul sito" value={s.emails_found?.length ? s.emails_found.join(', ') : '—'} />
                 <Row label="Telefoni trovati" value={s.phones_found?.length ? s.phones_found.join(', ') : '—'} />
+                <Row
+                  label="SEO base"
+                  value={
+                    <span className="flex flex-wrap gap-3">
+                      <span>Title: <Bool v={s.seo_title} /></span>
+                      <span>Descrizione: <Bool v={s.seo_description} /></span>
+                      <span>H1: <Bool v={s.seo_h1} /></span>
+                    </span>
+                  }
+                  highlight={s.seo_description === false && s.seo_h1 === false}
+                />
+                <Row label="Pagine analizzate" value={
+                  s.pages_fetched?.length ? (
+                    <details>
+                      <summary className="cursor-pointer text-blue-700">{s.pages_fetched.length} pagine (vedi elenco)</summary>
+                      <ul className="mt-1 space-y-0.5">
+                        {s.pages_fetched.map((u, i) => (
+                          <li key={i} className="text-xs text-gray-500 truncate max-w-md">{u}</li>
+                        ))}
+                      </ul>
+                    </details>
+                  ) : '—'
+                } />
               </>
             )}
             {s.fetch_error && (

@@ -30,14 +30,19 @@ export function computeWeaknessScore(
     // PSI performance < 50: +1
     if (signals.psi_performance !== null && signals.psi_performance !== undefined && signals.psi_performance < 50) score += 1
 
-    // Nessuna versione EN/DE su settore export: +1
+    // Nessuna versione EN/DE su settore export: +1 (solo se le lingue sono state verificate)
     const isExport = EXPORT_CATEGORIES.some(c => categoria.toLowerCase().includes(c))
     if (isExport) {
-      const hasIntl = (signals.lang_versions ?? []).some(l => l.startsWith('en') || l.startsWith('de'))
-      if (!hasIntl) score += 1
+      if (signals.lang_versions !== undefined) {
+        const hasIntl = signals.lang_versions.some(l => l.startsWith('en') || l.startsWith('de'))
+        if (!hasIntl) score += 1
+      }
       // Bonus settore export: +1
       score += 1
     }
+
+    // SEO base assente (né meta description né H1, verificati): +1 — sito trascurato
+    if (signals.seo_description === false && signals.seo_h1 === false) score += 1
 
     // Footprint minimo (sito sottile, poche pagine): +1
     if ((signals.page_count_estimate ?? 10) < 4) score += 1

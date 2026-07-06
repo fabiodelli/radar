@@ -46,6 +46,14 @@ export interface Signals {
   phones_found: string[]
   fetch_error: string | null
 
+  // SEO base (home page) — null = non verificabile
+  seo_title: boolean | null
+  seo_description: boolean | null
+  seo_h1: boolean | null
+
+  // Trasparenza: URL effettivamente analizzate in questo screening
+  pages_fetched: string[]
+
   // PageSpeed Insights
   psi_performance: number | null
   psi_mobile_usability: boolean | null
