@@ -32,9 +32,11 @@ const SERVIZI: Array<{ value: ServiziProponibili; label: string }> = [
 
 interface EditableFieldsProps {
   prospect: Prospect
+  onSaved?: (updated: Prospect) => void
+  onDirtyChange?: (dirty: boolean) => void
 }
 
-export function EditableFields({ prospect }: EditableFieldsProps) {
+export function EditableFields({ prospect, onSaved, onDirtyChange }: EditableFieldsProps) {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [fields, setFields] = useState<ProspectPatch>({
@@ -58,6 +60,8 @@ export function EditableFields({ prospect }: EditableFieldsProps) {
         body: JSON.stringify(patch),
       })
       if (!res.ok) throw new Error(await res.text())
+      const updated = (await res.json()) as Prospect
+      onSaved?.(updated)
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
     } catch (e) {
@@ -69,6 +73,7 @@ export function EditableFields({ prospect }: EditableFieldsProps) {
 
   function update<K extends keyof ProspectPatch>(key: K, value: ProspectPatch[K]) {
     setFields(prev => ({ ...prev, [key]: value }))
+    onDirtyChange?.(true)
   }
 
   function toggleServizio(s: ServiziProponibili) {

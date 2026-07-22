@@ -35,9 +35,10 @@ function phoneHint(live: LivePlaceData | null): 'cellulare' | 'fisso' | null {
 interface ActionBarProps {
   prospect: Prospect
   liveData: LivePlaceData | null
+  hasUnsavedEdits?: boolean
 }
 
-export function ActionBar({ prospect, liveData }: ActionBarProps) {
+export function ActionBar({ prospect, liveData, hasUnsavedEdits = false }: ActionBarProps) {
   const [loadingMail, setLoadingMail] = useState(false)
   const [loadingAudit, setLoadingAudit] = useState(false)
   const [mailText, setMailText] = useState<string | null>(null)
@@ -168,6 +169,12 @@ export function ActionBar({ prospect, liveData }: ActionBarProps) {
 
   return (
     <div className="space-y-4">
+      {hasUnsavedEdits && (
+        <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-800">
+          Ci sono modifiche non salvate nella Scheda Fabio: premi Salva prima di generare, altrimenti recap, mail e messaggi non le includeranno.
+        </p>
+      )}
+
       {/* Azioni principali */}
       <div className="flex flex-wrap gap-2">
         <button

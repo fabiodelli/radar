@@ -14,6 +14,7 @@ Chi è Fabio (usa per tono e posizionamento, non elencarlo meccanicamente):
 - Si occupa di siti web e soluzioni digitali, incluse integrazioni AI (assistenti multilingue, automazioni) quando portano valore concreto.
 
 Regole ferme:
+- Se la scheda contiene "Servizi da proporre" o "Note di Fabio (scoperture, visita, idee)", trattali come indicazioni prioritarie: l'angolo dell'email deve riflettere quei servizi e quelle osservazioni dirette, che valgono più dei segnali tecnici automatici della scheda.
 - Tono calmo, diretto, non commerciale. Servire, non vendere.
 - NON usare trattini lunghi (—), NON usare numeri o percentuali nel corpo.
 - NON usare la parola "artigiano" o "artigianale". NON definire mai Fabio un'agenzia.

@@ -14,11 +14,20 @@ interface ProspectCardProps {
   prospect: Prospect
 }
 
-export function ProspectCard({ prospect }: ProspectCardProps) {
+export function ProspectCard({ prospect: initialProspect }: ProspectCardProps) {
   const [liveData, setLiveData] = useState<LivePlaceData | null>(null)
+  // Il prospect vive in stato: i salvataggi della Scheda Fabio lo aggiornano,
+  // così recap e generazione mail/WhatsApp usano sempre i dati correnti.
+  const [prospect, setProspect] = useState<Prospect>(initialProspect)
+  const [hasUnsavedEdits, setHasUnsavedEdits] = useState(false)
 
   const handleLiveLoad = useCallback((data: LivePlaceData) => {
     setLiveData(data)
+  }, [])
+
+  const handleSaved = useCallback((updated: Prospect) => {
+    setProspect(updated)
+    setHasUnsavedEdits(false)
   }, [])
 
   return (
@@ -54,13 +63,17 @@ export function ProspectCard({ prospect }: ProspectCardProps) {
         <SignalsDossier signals={prospect.signals} websiteUrl={prospect.website_url} screenshotUrl={prospect.screenshot_url} />
 
         {/* Campi Fabio */}
-        <EditableFields prospect={prospect} />
+        <EditableFields
+          prospect={prospect}
+          onSaved={handleSaved}
+          onDirtyChange={setHasUnsavedEdits}
+        />
       </div>
 
       {/* Azioni */}
       <div className="rounded-lg border border-gray-200 bg-white p-4">
         <h3 className="text-sm font-semibold text-gray-700 mb-3">Azioni</h3>
-        <ActionBar prospect={prospect} liveData={liveData} />
+        <ActionBar prospect={prospect} liveData={liveData} hasUnsavedEdits={hasUnsavedEdits} />
       </div>
 
       {/* Provenienza dati */}

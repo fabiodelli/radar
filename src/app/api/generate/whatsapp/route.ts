@@ -13,6 +13,7 @@ Chi è Fabio (usa per tono e posizionamento, non elencarlo):
 - Si occupa di siti web e soluzioni digitali, incluse integrazioni AI (assistenti multilingue, automazioni), quando portano valore.
 
 Regole ferme:
+- Se la scheda contiene "Servizi da proporre" o "Note di Fabio (scoperture, visita, idee)", trattali come indicazioni prioritarie: lo spunto del messaggio deve riflettere quei servizi e quelle osservazioni dirette, che valgono più dei segnali tecnici automatici della scheda.
 - È WhatsApp, NON una email: molto breve (2-4 frasi corte). Tono cortese, diretto, per niente commerciale. Servire, non vendere.
 - NIENTE oggetto, niente formule da lettera ("Gentile…", "Cordiali saluti"). Apri con un saluto semplice e presentati in una riga.
 - Spiega in una frase perché scrivi a LORO, collegandoti alla loro attività o settore.
