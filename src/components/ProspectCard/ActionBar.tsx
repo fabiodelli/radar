@@ -122,8 +122,8 @@ export function ActionBar({ prospect, liveData, hasUnsavedEdits = false }: Actio
     window.open(url, '_blank')
   }
 
-  // Account Gmail di Fabio (mittente)
-  const GMAIL_ACCOUNT = 'delli.fabio@gmail.com'
+  // Account Gmail mittente. Se non configurato, Gmail usa il primo account loggato.
+  const GMAIL_ACCOUNT = process.env.NEXT_PUBLIC_GMAIL_ACCOUNT ?? '0'
 
   // Estrae oggetto e corpo dalla bozza generata (prima riga "Oggetto: ...").
   function splitDraft(draft: string): { subject: string; body: string } {
@@ -144,7 +144,7 @@ export function ActionBar({ prospect, liveData, hasUnsavedEdits = false }: Actio
       ? splitDraft(mailText)
       : { subject: "Un'occhiata al vostro sito", body: draft }
 
-    // Apre direttamente la finestra di composizione Gmail sull'account di Fabio
+    // Apre direttamente la finestra di composizione Gmail sull'account mittente
     const gmailUrl =
       `https://mail.google.com/mail/?authuser=${encodeURIComponent(GMAIL_ACCOUNT)}` +
       `&view=cm&fs=1&tf=1` +

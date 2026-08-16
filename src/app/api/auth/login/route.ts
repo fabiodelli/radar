@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sessionToken } from '@/lib/auth'
 
-const ACCESS_PASSWORD = process.env.RADAR_PASSWORD ?? 'radar2024'
+// Nessun default: senza RADAR_PASSWORD configurata il login e' impossibile (fail closed)
+const ACCESS_PASSWORD = process.env.RADAR_PASSWORD
 
 export async function POST(req: NextRequest) {
   const { password } = await req.json()
+
+  if (!ACCESS_PASSWORD) {
+    return NextResponse.json({ error: 'RADAR_PASSWORD non configurata' }, { status: 500 })
+  }
 
   if (password !== ACCESS_PASSWORD) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

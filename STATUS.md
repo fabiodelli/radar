@@ -13,7 +13,7 @@
 - [x] "Copia recap" genera l'handoff completo — `src/lib/handoff.ts`
 - [x] "Genera mail" chiama Anthropic API (claude-sonnet-5; Haiku selezionabile)
 - [x] "Genera mini-audit" — Sonnet 5 sui signals, con fallback deterministico
-- [x] "Apri in Gmail" — apre la composizione Gmail (delli.fabio@gmail.com) precompilata
+- [x] "Apri in Gmail" — apre la composizione Gmail (account da `NEXT_PUBLIC_GMAIL_ACCOUNT`) precompilata
 - [x] Provenienza dati registrata; etichetta generic/nominative sulle email
 - [x] Contatore chiamate API sessione visibile nello screening runner
 - [x] Auth gate (cookie = hash SHA-256 della password, middleware Next.js)
@@ -27,7 +27,8 @@
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `SUPABASE_SERVICE_ROLE_KEY`
    - `ANTHROPIC_API_KEY`
-   - `RADAR_PASSWORD` (opzionale, default: `radar2024`)
+   - `RADAR_PASSWORD` (obbligatoria: senza, l'accesso resta chiuso)
+   - `NEXT_PUBLIC_GMAIL_ACCOUNT` (opzionale: account mittente per "Apri in Gmail")
 3. **Spend limit Google Cloud**: impostalo prima di screening ampi
 
 ### Struttura file chiave

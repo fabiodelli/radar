@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sessionToken } from '@/lib/auth'
 
-const ACCESS_PASSWORD = process.env.RADAR_PASSWORD ?? 'radar2024'
+// Nessun default: senza RADAR_PASSWORD configurata l'app resta chiusa (fail closed)
+const ACCESS_PASSWORD = process.env.RADAR_PASSWORD
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
@@ -18,7 +19,7 @@ export async function middleware(req: NextRequest) {
 
   // Verifica cookie di sessione (hash della password, mai la password in chiaro)
   const session = req.cookies.get('radar_session')
-  if (session?.value === await sessionToken(ACCESS_PASSWORD)) {
+  if (ACCESS_PASSWORD && session?.value === await sessionToken(ACCESS_PASSWORD)) {
     return NextResponse.next()
   }
 
